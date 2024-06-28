@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库存调整工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        input, button {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        #loading {
+            display: none;
+            margin-top: 20px;
+        }
+        #loading img {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>库存调整工具</h1>
+    <input type="number" id="target" placeholder="请输入目标库存总价" required>
+    <input type="file" id="file" accept=".xls" required>
+    <button id="sendBtn" onclick="sendRequest()">发送</button>
+    <div id="loading">
+        <img src="https://i.gifer.com/YCZH.gif" alt="Loading...">
+    </div>
+    <script>
+        function sendRequest() {
+            const target = document.getElementById('target').value;
+            const fileInput = document.getElementById('file');
+            const file = fileInput.files[0];
+
+            if (!target || !file) {
+                alert("请输入目标库存总价并选择一个文件。");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('target', target);
+            formData.append('file', file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', window.location.origin + '/upload', true);
+            xhr.responseType = 'blob';
+
+            xhr.onloadstart = function() {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('target').disabled = true;
+                document.getElementById('file').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+            };
+
+            xhr.onloadend = function() {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('target').disabled = false;
+                document.getElementById('file').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+            };
+
+            xhr.onerror = function() {
+                alert('请求出错，请重试。');
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 500) {
+                    alert('服务器内部错误: ' + xhr.responseText);
+                } else if (xhr.status === 400) {
+                    // alert(xhr.responseText);
+                    var reader = new FileReader();
+                    reader.onload = function() {
+                        alert(reader.result);  // 读取错误信息并显示
+                    };
+                    reader.readAsText(xhr.response); 
+                } else if (xhr.status === 200) {
+                    const url = window.URL.createObjectURL(xhr.response);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'update.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => window.URL.revokeObjectURL(url), 0);
+                }
+            };
+
+            xhr.send(formData);
+        }
+    </script>
+</body>
+</html>
